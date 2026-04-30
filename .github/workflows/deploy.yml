@@ -1,0 +1,54 @@
+# ──────────────────────────────────────────────────
+# CI/CD Pipeline: Build → Push to ACR → Deploy to AKS
+# Triggered on push to main branch
+# ──────────────────────────────────────────────────
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches: [main]
+
+env:
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  AKS_RESOURCE_GROUP: ${{ secrets.AKS_RESOURCE_GROUP }}
+  AKS_CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Login to Azure
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build and push Docker image to ACR
+      run: |
+        az acr build \
+          --registry ${{ env.ACR_NAME }} \
+          --image courses-api:${{ github.sha }} \
+          --image courses-api:latest \
+          --file CoursesPlatform.API/Dockerfile .
+
+    - name: Set AKS context
+      uses: azure/aks-set-context@v4
+      with:
+        resource-group: ${{ env.AKS_RESOURCE_GROUP }}
+        cluster-name: ${{ env.AKS_CLUSTER_NAME }}
+
+    - name: Deploy to AKS
+      run: |
+        # Update the deployment image to the new build
+        kubectl set image deployment/courses-api \
+          courses-api=${{ env.ACR_NAME }}.azurecr.io/courses-api:${{ github.sha }}
+
+        # Wait for rollout to complete
+        kubectl rollout status deployment/courses-api --timeout=120s
+
+    - name: Verify deployment
+      run: |
+        kubectl get pods -l app=courses-api
+        kubectl get svc courses-api-service

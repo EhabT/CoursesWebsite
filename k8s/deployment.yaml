@@ -1,0 +1,87 @@
+# ──────────────────────────────────────────────────
+# Kubernetes Deployment for Courses Platform API
+# Runs on AKS with secrets from Kubernetes Secrets
+# ──────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: courses-api
+  labels:
+    app: courses-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: courses-api
+  template:
+    metadata:
+      labels:
+        app: courses-api
+    spec:
+      containers:
+      - name: courses-api
+        image: <ACR_NAME>.azurecr.io/courses-api:latest
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: CosmosDb__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: cosmos-connection
+        - name: BlobStorage__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: blob-connection
+        - name: Cdn__Endpoint
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: cdn-endpoint
+        - name: Cdn__BlobHost
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: blob-host
+        - name: CognitiveServices__Endpoint
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: cognitive-endpoint
+        - name: CognitiveServices__ApiKey
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: cognitive-key
+        - name: AzureAd__TenantId
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: aad-tenant-id
+        - name: AzureAd__ClientId
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: aad-client-id
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10

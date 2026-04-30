@@ -1,0 +1,19 @@
+# ──────────────────────────────────────────────────
+# Kubernetes Service — exposes API deployment
+# Uses LoadBalancer type for external access on AKS
+# ──────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: courses-api-service
+  labels:
+    app: courses-api
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: courses-api

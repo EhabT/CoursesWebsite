@@ -1,0 +1,7 @@
+# Do not build context for .NET build output
+bin/
+obj/
+.vs/
+*.user
+*.suo
+node_modules/
