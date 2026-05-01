@@ -41,7 +41,7 @@ public class VideosController : ControllerBase
     [HttpPost]
     [Authorize(Roles = "INSTRUCTOR")]
     [RequestSizeLimit(500_000_000)] // 500 MB limit
-    public async Task<ActionResult<Video>> Upload(string courseId, [FromForm] IFormFile file, [FromForm] string title, [FromForm] int duration)
+    public async Task<ActionResult<Video>> Upload(string courseId, IFormFile file, [FromForm] string title, [FromForm] int duration)
     {
         // Verify course exists
         var course = await _db.GetAsync<Course>(courseId, courseId);
