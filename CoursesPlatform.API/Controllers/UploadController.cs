@@ -33,7 +33,7 @@ public class UploadController : ControllerBase
     [HttpPost("image")]
     [Authorize(Roles = "INSTRUCTOR")]
     [RequestSizeLimit(10_000_000)] // 10 MB
-    public async Task<ActionResult<UploadResultDto>> UploadImage([FromForm] IFormFile file)
+    public async Task<ActionResult<UploadResultDto>> UploadImage(IFormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest("No file provided");
@@ -61,7 +61,7 @@ public class UploadController : ControllerBase
     [HttpPost("video")]
     [Authorize(Roles = "INSTRUCTOR")]
     [RequestSizeLimit(500_000_000)] // 500 MB
-    public async Task<ActionResult<UploadResultDto>> UploadVideo([FromForm] IFormFile file)
+    public async Task<ActionResult<UploadResultDto>> UploadVideo(IFormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest("No file provided");

@@ -4,6 +4,8 @@
  */
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { msalInstance } from '../main';
+import { loginRequest } from '../authConfig';
 
 /**
  * Generic fetch wrapper with auth token injection and error handling.
@@ -11,8 +13,20 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
   
-  // Get token from localStorage (set after MSAL login)
-  const token = localStorage.getItem('accessToken');
+  // Try to acquire an access token silently
+  let token = null;
+  const activeAccount = msalInstance.getAllAccounts()[0];
+  if (activeAccount) {
+    try {
+      const tokenResponse = await msalInstance.acquireTokenSilent({
+        ...loginRequest,
+        account: activeAccount
+      });
+      token = tokenResponse.accessToken;
+    } catch (e) {
+      console.warn("Failed to acquire token silently", e);
+    }
+  }
   
   const headers = {
     ...options.headers,

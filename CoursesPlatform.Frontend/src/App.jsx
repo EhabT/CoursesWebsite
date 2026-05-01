@@ -1,12 +1,19 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 import Home from './pages/Home';
 import CourseDetail from './pages/CourseDetail';
 import InstructorDashboard from './pages/InstructorDashboard';
 import Login from './pages/Login';
 
 export default function App() {
-  const role = localStorage.getItem('userRole');
+  const isAuthenticated = useIsAuthenticated();
+  const { accounts } = useMsal();
+  
+  // Extract role from the Entra ID token claims
+  const role = isAuthenticated && accounts.length > 0 
+    ? (accounts[0].idTokenClaims?.roles?.[0] || 'STUDENT')
+    : null;
 
   return (
     <Router>
