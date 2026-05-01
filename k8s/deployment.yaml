@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: courses-api
-        image: <ACR_NAME>.azurecr.io/courses-api:latest
+        image: coursesacrehab.azurecr.io/courses-api:latest
         ports:
         - containerPort: 8080
         resources:
