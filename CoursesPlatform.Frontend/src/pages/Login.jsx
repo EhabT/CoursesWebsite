@@ -7,6 +7,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { instance, accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
+  const [loginError, setLoginError] = useState(null);
   
   const role = isAuthenticated && accounts.length > 0 
     ? (accounts[0].idTokenClaims?.roles?.[0] || 'STUDENT')
@@ -14,18 +15,17 @@ export default function Login() {
 
   async function handleLogin() {
     try {
-      await instance.loginPopup(loginRequest);
-      navigate('/');
+      setLoginError(null);
+      await instance.loginRedirect(loginRequest);
     } catch (error) {
       console.error(error);
-      alert('Login failed. See console.');
+      setLoginError(error.message || 'Unknown login error');
     }
   }
 
   async function handleLogout() {
     try {
-      await instance.logoutPopup();
-      navigate('/');
+      await instance.logoutRedirect();
     } catch (error) {
       console.error(error);
     }
@@ -56,6 +56,15 @@ export default function Login() {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px', textAlign: 'center' }}>
               You are currently signed out.
             </p>
+          )}
+
+          {loginError && (
+            <div style={{
+              padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem', color: '#fca5a5', wordBreak: 'break-word'
+            }}>
+              ❌ <strong>Login Error:</strong> {loginError}
+            </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
