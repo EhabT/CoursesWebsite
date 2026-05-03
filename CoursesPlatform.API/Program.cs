@@ -4,6 +4,7 @@ using Microsoft.Identity.Web;
 using CoursesPlatform.API.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,35 @@ builder.Services.AddSingleton<CognitiveService>();
 
 // ── Microsoft Entra ID (Azure AD) Authentication ──
 builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "AzureAd");
+builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    var tenantId = builder.Configuration["AzureAd:TenantId"];
+    var apiClientId = builder.Configuration["AzureAd:ClientId"];
+    var audience = builder.Configuration["AzureAd:Audience"];
+
+    options.TokenValidationParameters.ValidAudiences = new[]
+    {
+        audience,
+        apiClientId,
+        $"api://{apiClientId}"
+    }.Where(value => !string.IsNullOrWhiteSpace(value));
+
+    options.TokenValidationParameters.ValidIssuers = new[]
+    {
+        $"https://coursesappehab.ciamlogin.com/{tenantId}/v2.0",
+        $"https://login.microsoftonline.com/{tenantId}/v2.0"
+    }.Where(value => !string.IsNullOrWhiteSpace(value));
+
+    options.Events ??= new JwtBearerEvents();
+    options.Events.OnAuthenticationFailed = context =>
+    {
+        var logger = context.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("JwtBearer");
+        logger.LogWarning(context.Exception, "JWT authentication failed");
+        return Task.CompletedTask;
+    };
+});
 builder.Services.AddTransient<IClaimsTransformation, DemoRoleClaimsTransformation>();
 
 // ── CORS (allow React frontend) ──

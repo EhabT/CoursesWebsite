@@ -24,7 +24,7 @@ export default function App() {
         .catch(error => {
           console.error('Failed to load current user role:', error);
           setRole(null);
-          setRoleError('Could not load your account role. Please sign out and sign in again.');
+          setRoleError(error.message || 'Could not load your account role. Please sign out and sign in again.');
         })
         .finally(() => setRoleLoading(false));
     } else {

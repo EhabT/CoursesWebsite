@@ -9,7 +9,14 @@ import { msalConfig } from './authConfig';
 export const msalInstance = new PublicClientApplication(msalConfig);
 
 // Initialize MSAL, then render the app
-msalInstance.initialize().then(() => {
+msalInstance.initialize().then(async () => {
+  const redirectResponse = await msalInstance.handleRedirectPromise();
+  const account = redirectResponse?.account || msalInstance.getAllAccounts()[0];
+
+  if (account) {
+    msalInstance.setActiveAccount(account);
+  }
+
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
       <MsalProvider instance={msalInstance}>

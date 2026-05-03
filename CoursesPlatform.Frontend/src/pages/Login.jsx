@@ -41,6 +41,18 @@ export default function Login({ role, roleLoading, roleError }) {
     }
   }
 
+  async function handleRefreshPermissions() {
+    setLoginError(null);
+    setLoading(true);
+    try {
+      await instance.loginRedirect(loginRequest);
+    } catch (error) {
+      setLoading(false);
+      console.error('Permission refresh error:', error);
+      setLoginError(error.message || 'Could not refresh permissions. Please try again.');
+    }
+  }
+
   return (
     <div className="page">
       <div className="container" style={{ maxWidth: '440px' }}>
@@ -110,6 +122,11 @@ export default function Login({ role, roleLoading, roleError }) {
                 >
                   {role === 'INSTRUCTOR' ? '📊 Go to Dashboard' : '🏠 Go to Home'}
                 </button>
+                {roleError && (
+                  <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleRefreshPermissions}>
+                    Refresh permissions
+                  </button>
+                )}
                 <button id="logout-btn" className="btn btn-secondary" style={{ width: '100%' }} onClick={handleLogout}>
                   Sign Out
                 </button>
