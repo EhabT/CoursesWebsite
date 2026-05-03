@@ -48,9 +48,8 @@ public class VideosController : ControllerBase
         var course = await _db.GetAsync<Course>(courseId, courseId);
         if (course == null) return NotFound("Course not found");
 
-        var userId = User.GetUserId();
-        if (!CanModifyCourse(course, userId))
-            return Forbid();
+        if (!CanModifyCourse(course, User.GetUserIds()))
+            return Problem("This course belongs to a different instructor.", statusCode: StatusCodes.Status403Forbidden);
 
         // Upload video to blob storage
         var blobUrl = await _blob.UploadAsync(
@@ -87,9 +86,8 @@ public class VideosController : ControllerBase
         var course = await _db.GetAsync<Course>(courseId, courseId);
         if (course == null) return NotFound("Course not found");
 
-        var userId = User.GetUserId();
-        if (!CanModifyCourse(course, userId))
-            return Forbid();
+        if (!CanModifyCourse(course, User.GetUserIds()))
+            return Problem("This course belongs to a different instructor.", statusCode: StatusCodes.Status403Forbidden);
 
         var video = await _db.GetAsync<Video>(videoId, courseId);
         if (video == null) return NotFound();
@@ -104,11 +102,10 @@ public class VideosController : ControllerBase
         return NoContent();
     }
 
-    private static bool CanModifyCourse(Course course, string userId)
+    private static bool CanModifyCourse(Course course, IReadOnlySet<string> userIds)
     {
-        if (string.IsNullOrWhiteSpace(course.InstructorId) || course.InstructorId == "unknown")
-            return true;
-
-        return course.InstructorId == userId || userId == "unknown";
+        return !string.IsNullOrWhiteSpace(course.InstructorId)
+            && course.InstructorId != "unknown"
+            && userIds.Contains(course.InstructorId);
     }
 }

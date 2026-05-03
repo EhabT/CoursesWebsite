@@ -57,8 +57,7 @@ public class BlobStorageService
 
         if (containerIndex < 0 || containerIndex == segments.Count - 1)
         {
-            _logger.LogWarning("Could not resolve blob name from URL {BlobUrl}", blobUrl);
-            return;
+            throw new InvalidOperationException($"Could not resolve blob name from URL '{blobUrl}'.");
         }
 
         var blobName = string.Join("/", segments.Skip(containerIndex + 1));

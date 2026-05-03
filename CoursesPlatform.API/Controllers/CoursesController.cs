@@ -82,9 +82,8 @@ public class CoursesController : ControllerBase
         if (course == null) return NotFound();
 
         // Only the course owner can update
-        var userId = User.GetUserId();
-        if (!CanModifyCourse(course, userId))
-            return Forbid();
+        if (!CanModifyCourse(course, User.GetUserIds()))
+            return Problem("This course belongs to a different instructor.", statusCode: StatusCodes.Status403Forbidden);
 
         if (dto.Title != null) course.Title = dto.Title;
         if (dto.Description != null) course.Description = dto.Description;
@@ -112,18 +111,29 @@ public class CoursesController : ControllerBase
         var course = await _db.GetAsync<Course>(id, id);
         if (course == null) return NotFound();
 
-        var userId = User.GetUserId();
-        if (!CanModifyCourse(course, userId))
-            return Forbid();
+        if (!CanModifyCourse(course, User.GetUserIds()))
+            return Problem("This course belongs to a different instructor.", statusCode: StatusCodes.Status403Forbidden);
 
-        // 1. Delete associated videos (and their blobs)
         var videos = await _db.QueryAsync<Video>(id, "VIDEO");
+
+        // Blob cleanup is required. If a video or thumbnail blob cannot be deleted,
+        // keep the Cosmos DB documents so the course is not half-deleted.
         foreach (var video in videos)
         {
-            if (!string.IsNullOrEmpty(video.BlobUrl))
+            if (!string.IsNullOrWhiteSpace(video.BlobUrl))
             {
                 await _blob.DeleteAsync(video.BlobUrl, "videos");
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(course.ThumbnailUrl))
+        {
+            await _blob.DeleteAsync(course.ThumbnailUrl, "images");
+        }
+
+        // 1. Delete associated videos
+        foreach (var video in videos)
+        {
             await _db.DeleteAsync(video.Id, id);
         }
 
@@ -150,22 +160,15 @@ public class CoursesController : ControllerBase
             await _db.DeleteAsync(enrolment.Id, enrolment.Pk);
         }
 
-        // 5. Delete course thumbnail image blob
-        if (!string.IsNullOrWhiteSpace(course.ThumbnailUrl))
-        {
-            await _blob.DeleteAsync(course.ThumbnailUrl, "images");
-        }
-
         // Finally, delete the course itself
         await _db.DeleteAsync(id, id);
         return NoContent();
     }
 
-    private static bool CanModifyCourse(Course course, string userId)
+    private static bool CanModifyCourse(Course course, IReadOnlySet<string> userIds)
     {
-        if (string.IsNullOrWhiteSpace(course.InstructorId) || course.InstructorId == "unknown")
-            return true;
-
-        return course.InstructorId == userId || userId == "unknown";
+        return !string.IsNullOrWhiteSpace(course.InstructorId)
+            && course.InstructorId != "unknown"
+            && userIds.Contains(course.InstructorId);
     }
 }
