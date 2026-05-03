@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 import Home from './pages/Home';
 import CourseDetail from './pages/CourseDetail';
@@ -14,6 +14,13 @@ export default function App() {
   const role = isAuthenticated && accounts.length > 0 
     ? (accounts[0].idTokenClaims?.roles?.[0] || 'STUDENT')
     : null;
+
+  // Route Guard Component
+  const ProtectedRoute = ({ children, requiredRole }) => {
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+    if (role !== requiredRole) return <Navigate to="/" replace />;
+    return children;
+  };
 
   return (
     <Router>
@@ -45,7 +52,11 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/courses/:id" element={<CourseDetail />} />
-          <Route path="/dashboard" element={<InstructorDashboard />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute requiredRole="INSTRUCTOR">
+              <InstructorDashboard />
+            </ProtectedRoute>
+          } />
           <Route path="/login" element={<Login />} />
         </Routes>
       </div>

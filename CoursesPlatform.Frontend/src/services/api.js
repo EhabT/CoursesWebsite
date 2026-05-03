@@ -24,7 +24,12 @@ async function request(endpoint, options = {}) {
       });
       token = tokenResponse.accessToken;
     } catch (e) {
-      console.warn("Failed to acquire token silently", e);
+      console.warn("Failed to acquire token silently, redirecting...", e);
+      await msalInstance.acquireTokenRedirect({
+        ...loginRequest,
+        account: activeAccount
+      });
+      return; // Stop execution as the page will redirect
     }
   }
   

@@ -1,7 +1,7 @@
 export const msalConfig = {
     auth: {
         clientId: "f44f7776-901b-48a7-be3a-ee2a9e21b35e", // Courses Frontend App ID
-        authority: "https://5fa0aed9-6ad3-43aa-b026-cc965293e870.ciamlogin.com/5fa0aed9-6ad3-43aa-b026-cc965293e870/v2.0", // External Tenant ID
+        authority: "https://coursesappehab.ciamlogin.com/5fa0aed9-6ad3-43aa-b026-cc965293e870/v2.0", // External Tenant ID
         redirectUri: "/", 
         postLogoutRedirectUri: "/",
         navigateToLoginRequestUrl: true, 
