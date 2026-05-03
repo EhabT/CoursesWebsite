@@ -12,12 +12,14 @@ export const msalConfig = {
     }
 };
 
-// Scopes used during login — only OpenID scopes, NOT the API scope
+// Scopes used during login.
+const apiScopes = ["api://a3315a3b-660f-4fcd-9705-04a3df3f3c89/access_as_user"];
+
 export const loginRequest = {
-    scopes: ["openid", "profile", "offline_access"]
+    scopes: ["openid", "profile", "offline_access", ...apiScopes]
 };
 
 // Scopes used to silently get an access token for the .NET backend
 export const apiRequest = {
-    scopes: ["api://a3315a3b-660f-4fcd-9705-04a3df3f3c89/access_as_user"]
+    scopes: apiScopes
 };

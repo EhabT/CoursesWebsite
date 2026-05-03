@@ -81,10 +81,12 @@ app.MapHealthChecks("/health");
 
 // Returns the authenticated user's role — used by the frontend since roles live
 // in the access token (not the ID token), so the frontend can't read them directly.
+// Also returns all claims so we can diagnose what Entra puts in the access token.
 app.MapGet("/api/me", (ClaimsPrincipal user) =>
 {
     var role = user.IsInRole("INSTRUCTOR") ? "INSTRUCTOR" : "STUDENT";
-    return Results.Ok(new { role });
+    var claims = user.Claims.Select(c => new { type = c.Type, value = c.Value });
+    return Results.Ok(new { role, claims });
 }).RequireAuthorization();
 
 app.Run();
@@ -98,13 +100,24 @@ public class DemoRoleClaimsTransformation : IClaimsTransformation
 
         if (newIdentity != null && newIdentity.IsAuthenticated)
         {
-            var email = clone.FindFirstValue("preferred_username") ?? clone.FindFirstValue("emails") ?? clone.FindFirstValue(ClaimTypes.Name);
-            if (email != null && (email.Equals("etarek1310@gmail.com", StringComparison.OrdinalIgnoreCase) || email.Contains("instructor", StringComparison.OrdinalIgnoreCase) || email.Contains("etarek", StringComparison.OrdinalIgnoreCase)))
+            // CIAM access tokens may not include email claims by default.
+            // Try every claim name variant that Entra/CIAM might use.
+            var email = clone.FindFirstValue("preferred_username")
+                ?? clone.FindFirstValue("email")
+                ?? clone.FindFirstValue("emails")
+                ?? clone.FindFirstValue("upn")
+                ?? clone.FindFirstValue("unique_name")
+                ?? clone.FindFirstValue(ClaimTypes.Email)
+                ?? clone.FindFirstValue(ClaimTypes.Upn)
+                ?? clone.FindFirstValue(ClaimTypes.Name);
+
+            if (email != null && (
+                email.Equals("etarek1310@gmail.com", StringComparison.OrdinalIgnoreCase) ||
+                email.Contains("etarek", StringComparison.OrdinalIgnoreCase) ||
+                email.Contains("instructor", StringComparison.OrdinalIgnoreCase)))
             {
                 if (!clone.IsInRole("INSTRUCTOR"))
-                {
                     newIdentity.AddClaim(new Claim(ClaimTypes.Role, "INSTRUCTOR"));
-                }
             }
         }
         return Task.FromResult(clone);

@@ -3,12 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { loginRequest } from '../authConfig';
 
-export default function Login({ role }) {
+export default function Login({ role, roleLoading, roleError }) {
   const navigate = useNavigate();
   const { instance, accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const [loginError, setLoginError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const account = accounts[0];
+  const displayName = account?.name
+    || account?.username
+    || account?.idTokenClaims?.email
+    || account?.idTokenClaims?.preferred_username
+    || 'your account';
 
   async function handleLogin() {
     setLoginError(null);
@@ -54,8 +60,10 @@ export default function Login({ role }) {
               padding: '12px 16px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
               borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem', color: '#a7f3d0',
             }}>
-              ✅ Signed in as <strong>{accounts[0]?.name || email}</strong>
-              <div style={{ marginTop: '4px', fontSize: '0.78rem' }}>Role: <strong>{role}</strong></div>
+              ✅ Signed in as <strong>{displayName}</strong>
+              <div style={{ marginTop: '4px', fontSize: '0.78rem' }}>
+                Role: <strong>{roleLoading ? 'Loading...' : role || 'Unavailable'}</strong>
+              </div>
             </div>
           ) : (
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px', textAlign: 'center' }}>
@@ -69,6 +77,15 @@ export default function Login({ role }) {
               borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem', color: '#fca5a5', wordBreak: 'break-word'
             }}>
               ❌ <strong>Error:</strong> {loginError}
+            </div>
+          )}
+
+          {roleError && (
+            <div style={{
+              padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem', color: '#fca5a5', wordBreak: 'break-word'
+            }}>
+              <strong>Account role error:</strong> {roleError}
             </div>
           )}
 
@@ -89,6 +106,7 @@ export default function Login({ role }) {
                   className="btn btn-primary"
                   style={{ width: '100%' }}
                   onClick={() => navigate(role === 'INSTRUCTOR' ? '/dashboard' : '/')}
+                  disabled={roleLoading || Boolean(roleError)}
                 >
                   {role === 'INSTRUCTOR' ? '📊 Go to Dashboard' : '🏠 Go to Home'}
                 </button>

@@ -10,22 +10,35 @@ import { authApi } from './services/api';
 export default function App() {
   const isAuthenticated = useIsAuthenticated();
   const [role, setRole] = useState(null);
+  const [roleLoading, setRoleLoading] = useState(false);
+  const [roleError, setRoleError] = useState(null);
 
   // Fetch the role from the backend after login — roles live in the access token,
   // not the ID token, so we can't read them from idTokenClaims on the frontend.
   useEffect(() => {
     if (isAuthenticated) {
+      setRoleLoading(true);
+      setRoleError(null);
       authApi.getMe()
         .then(data => setRole(data.role))
-        .catch(() => setRole('STUDENT'));
+        .catch(error => {
+          console.error('Failed to load current user role:', error);
+          setRole(null);
+          setRoleError('Could not load your account role. Please sign out and sign in again.');
+        })
+        .finally(() => setRoleLoading(false));
     } else {
       setRole(null);
+      setRoleError(null);
+      setRoleLoading(false);
     }
   }, [isAuthenticated]);
 
   // Route Guard Component
   const ProtectedRoute = ({ children, requiredRole }) => {
     if (!isAuthenticated) return <Navigate to="/login" replace />;
+    if (roleLoading) return <div className="page"><div className="container">Loading your account...</div></div>;
+    if (roleError) return <Navigate to="/login" replace />;
     if (role !== requiredRole) return <Navigate to="/" replace />;
     return children;
   };
@@ -50,7 +63,7 @@ export default function App() {
                 </NavLink>
               )}
               <NavLink to="/login" className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}>
-                {role ? `👤 ${role}` : 'Login'}
+                {roleLoading ? 'Loading...' : role ? `👤 ${role}` : 'Login'}
               </NavLink>
             </div>
           </div>
@@ -65,7 +78,7 @@ export default function App() {
               <InstructorDashboard />
             </ProtectedRoute>
           } />
-          <Route path="/login" element={<Login role={role} />} />
+          <Route path="/login" element={<Login role={role} roleLoading={roleLoading} roleError={roleError} />} />
         </Routes>
       </div>
     </Router>
