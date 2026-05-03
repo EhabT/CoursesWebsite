@@ -74,13 +74,25 @@ spec:
               name: app-secrets
               key: aad-tenant-id
         - name: AzureAd__ClientId
-          value: "a3315a3b-660f-4fcd-9705-04a3df3f3c89"
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: aad-client-id
         - name: AzureAd__Audience
-          value: "api://a3315a3b-660f-4fcd-9705-04a3df3f3c89"
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: aad-audience
         - name: AzureAd__Instance
-          value: "https://coursesappehab.ciamlogin.com/"
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: aad-instance
         - name: AzureAd__Domain
-          value: "coursesappehab.onmicrosoft.com"
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: aad-domain
         livenessProbe:
           httpGet:
             path: /health
