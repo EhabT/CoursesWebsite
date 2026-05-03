@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using CoursesPlatform.API.Models;
 using CoursesPlatform.API.Models.DTOs;
 using CoursesPlatform.API.Services;
+using CoursesPlatform.API.Extensions;
 
 namespace CoursesPlatform.API.Controllers;
 
@@ -11,11 +12,13 @@ namespace CoursesPlatform.API.Controllers;
 public class CoursesController : ControllerBase
 {
     private readonly CosmosDbService _db;
+    private readonly BlobStorageService _blob;
     private readonly ILogger<CoursesController> _logger;
 
-    public CoursesController(CosmosDbService db, ILogger<CoursesController> logger)
+    public CoursesController(CosmosDbService db, BlobStorageService blob, ILogger<CoursesController> logger)
     {
         _db = db;
+        _blob = blob;
         _logger = logger;
     }
 
@@ -49,7 +52,7 @@ public class CoursesController : ControllerBase
     [Authorize(Roles = "INSTRUCTOR")]
     public async Task<ActionResult<Course>> Create([FromBody] CreateCourseDto dto)
     {
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("oid")?.Value ?? "unknown";
+        var userId = User.GetUserId();
 
         var course = new Course
         {
@@ -79,7 +82,7 @@ public class CoursesController : ControllerBase
         if (course == null) return NotFound();
 
         // Only the course owner can update
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("oid")?.Value ?? "unknown";
+        var userId = User.GetUserId();
         if (course.InstructorId != userId && userId != "unknown")
             return Forbid();
 
@@ -102,10 +105,45 @@ public class CoursesController : ControllerBase
         var course = await _db.GetAsync<Course>(id, id);
         if (course == null) return NotFound();
 
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("oid")?.Value ?? "unknown";
+        var userId = User.GetUserId();
         if (course.InstructorId != userId && userId != "unknown")
             return Forbid();
 
+        // 1. Delete associated videos (and their blobs)
+        var videos = await _db.QueryAsync<Video>(id, "VIDEO");
+        foreach (var video in videos)
+        {
+            if (!string.IsNullOrEmpty(video.BlobUrl))
+            {
+                await _blob.DeleteAsync(video.BlobUrl, "videos");
+            }
+            await _db.DeleteAsync(video.Id, id);
+        }
+
+        // 2. Delete comments
+        var comments = await _db.QueryAsync<Comment>(id, "COMMENT");
+        foreach (var comment in comments)
+        {
+            await _db.DeleteAsync(comment.Id, id);
+        }
+
+        // 3. Delete ratings
+        var ratings = await _db.QueryAsync<Rating>(id, "RATING");
+        foreach (var rating in ratings)
+        {
+            await _db.DeleteAsync(rating.Id, id);
+        }
+
+        // 4. Delete enrolments (cross-partition query since they are partitioned by userId)
+        var enrolments = await _db.SqlQueryAsync<Enrolment>(
+            "SELECT * FROM c WHERE c.type = 'ENROLMENT' AND c.courseId = @courseId",
+            new Dictionary<string, object> { { "@courseId", id } });
+        foreach (var enrolment in enrolments)
+        {
+            await _db.DeleteAsync(enrolment.Id, enrolment.Pk);
+        }
+
+        // Finally, delete the course itself
         await _db.DeleteAsync(id, id);
         return NoContent();
     }

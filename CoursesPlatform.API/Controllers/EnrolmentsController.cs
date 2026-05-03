@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using CoursesPlatform.API.Models;
 using CoursesPlatform.API.Models.DTOs;
 using CoursesPlatform.API.Services;
+using CoursesPlatform.API.Extensions;
 
 namespace CoursesPlatform.API.Controllers;
 
@@ -26,7 +27,7 @@ public class EnrolmentsController : ControllerBase
     [Authorize(Roles = "STUDENT")]
     public async Task<ActionResult<Enrolment>> Enrol([FromBody] CreateEnrolmentDto dto)
     {
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("oid")?.Value ?? "unknown";
+        var userId = User.GetUserId();
 
         // Verify course exists
         var course = await _db.GetAsync<Course>(dto.CourseId, dto.CourseId);
@@ -66,7 +67,7 @@ public class EnrolmentsController : ControllerBase
     [Authorize(Roles = "STUDENT")]
     public async Task<ActionResult<List<Enrolment>>> GetMy()
     {
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("oid")?.Value ?? "unknown";
+        var userId = User.GetUserId();
         var enrolments = await _db.QueryAsync<Enrolment>(userId, "ENROLMENT");
         return Ok(enrolments);
     }

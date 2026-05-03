@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using CoursesPlatform.API.Models;
 using CoursesPlatform.API.Models.DTOs;
 using CoursesPlatform.API.Services;
+using CoursesPlatform.API.Extensions;
 
 namespace CoursesPlatform.API.Controllers;
 
@@ -37,7 +38,7 @@ public class CommentsController : ControllerBase
     [Authorize(Roles = "STUDENT")]
     public async Task<ActionResult<Comment>> Create(string courseId, [FromBody] CreateCommentDto dto)
     {
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("oid")?.Value ?? "unknown";
+        var userId = User.GetUserId();
 
         var comment = new Comment
         {

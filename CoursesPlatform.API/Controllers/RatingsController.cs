@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using CoursesPlatform.API.Models;
 using CoursesPlatform.API.Models.DTOs;
 using CoursesPlatform.API.Services;
+using CoursesPlatform.API.Extensions;
 
 namespace CoursesPlatform.API.Controllers;
 
@@ -45,7 +46,7 @@ public class RatingsController : ControllerBase
         if (dto.Score < 1 || dto.Score > 5)
             return BadRequest("Score must be between 1 and 5");
 
-        var userId = User.FindFirst("sub")?.Value ?? User.FindFirst("oid")?.Value ?? "unknown";
+        var userId = User.GetUserId();
 
         // Check if user already rated this course
         var existing = await _db.SqlQueryAsync<Rating>(
