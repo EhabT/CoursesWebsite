@@ -83,12 +83,19 @@ public class CoursesController : ControllerBase
 
         // Only the course owner can update
         var userId = User.GetUserId();
-        if (course.InstructorId != userId && userId != "unknown")
+        if (!CanModifyCourse(course, userId))
             return Forbid();
 
         if (dto.Title != null) course.Title = dto.Title;
         if (dto.Description != null) course.Description = dto.Description;
-        if (dto.ThumbnailUrl != null) course.ThumbnailUrl = dto.ThumbnailUrl;
+        if (dto.ThumbnailUrl != null && dto.ThumbnailUrl != course.ThumbnailUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(course.ThumbnailUrl))
+            {
+                await _blob.DeleteAsync(course.ThumbnailUrl, "images");
+            }
+            course.ThumbnailUrl = dto.ThumbnailUrl;
+        }
         if (dto.Tags != null) course.Tags = dto.Tags;
 
         var updated = await _db.UpdateAsync(course);
@@ -106,7 +113,7 @@ public class CoursesController : ControllerBase
         if (course == null) return NotFound();
 
         var userId = User.GetUserId();
-        if (course.InstructorId != userId && userId != "unknown")
+        if (!CanModifyCourse(course, userId))
             return Forbid();
 
         // 1. Delete associated videos (and their blobs)
@@ -143,8 +150,22 @@ public class CoursesController : ControllerBase
             await _db.DeleteAsync(enrolment.Id, enrolment.Pk);
         }
 
+        // 5. Delete course thumbnail image blob
+        if (!string.IsNullOrWhiteSpace(course.ThumbnailUrl))
+        {
+            await _blob.DeleteAsync(course.ThumbnailUrl, "images");
+        }
+
         // Finally, delete the course itself
         await _db.DeleteAsync(id, id);
         return NoContent();
+    }
+
+    private static bool CanModifyCourse(Course course, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(course.InstructorId) || course.InstructorId == "unknown")
+            return true;
+
+        return course.InstructorId == userId || userId == "unknown";
     }
 }

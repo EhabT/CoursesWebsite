@@ -27,7 +27,7 @@ export default function InstructorDashboard() {
     try {
       const c = await coursesApi.create({ title: newTitle, description: newDesc, thumbnailUrl: '', tags: newTags.split(',').map(t=>t.trim()).filter(Boolean) });
       setCourses([c, ...courses]); setShowModal(null); setNewTitle(''); setNewDesc(''); setNewTags('');
-    } catch { alert('Failed — log in as INSTRUCTOR'); }
+    } catch (e) { alert(e.message || 'Failed - log in as INSTRUCTOR'); }
     finally { setBusy(false); }
   }
 
@@ -36,13 +36,13 @@ export default function InstructorDashboard() {
     try {
       const fd = new FormData(); fd.append('file', uploadFile); fd.append('title', vidTitle); fd.append('duration', vidDur||'0');
       await videosApi.upload(selectedCourseId, fd); alert('Uploaded!'); setShowModal(null);
-    } catch { alert('Upload failed'); }
+    } catch (e) { alert(e.message || 'Upload failed'); }
     finally { setBusy(false); }
   }
 
   async function deleteCourse(id) {
     if (!confirm('Delete this course?')) return;
-    try { await coursesApi.delete(id); setCourses(courses.filter(c=>c.id!==id)); } catch { alert('Delete failed'); }
+    try { await coursesApi.delete(id); setCourses(courses.filter(c=>c.id!==id)); } catch (e) { alert(e.message || 'Delete failed'); }
   }
 
   async function uploadThumb(cid) {
@@ -52,7 +52,7 @@ export default function InstructorDashboard() {
       const fd=new FormData(); fd.append('file',f);
       try { const r=await uploadApi.image(fd); await coursesApi.update(cid,{thumbnailUrl:r.cdnUrl}); load();
         if(r.autoTags?.length) alert('Tags: '+r.autoTags.join(', ')); else alert('Done!');
-      } catch { alert('Failed'); }
+      } catch (e) { alert(e.message || 'Failed'); }
     }; inp.click();
   }
 

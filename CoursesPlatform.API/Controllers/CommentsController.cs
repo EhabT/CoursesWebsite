@@ -38,6 +38,9 @@ public class CommentsController : ControllerBase
     [Authorize(Roles = "STUDENT")]
     public async Task<ActionResult<Comment>> Create(string courseId, [FromBody] CreateCommentDto dto)
     {
+        var course = await _db.GetAsync<Course>(courseId, courseId);
+        if (course == null) return NotFound("Course not found");
+
         var userId = User.GetUserId();
 
         var comment = new Comment

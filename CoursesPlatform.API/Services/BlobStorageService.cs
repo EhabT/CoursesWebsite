@@ -43,9 +43,25 @@ public class BlobStorageService
     /// </summary>
     public async Task DeleteAsync(string blobUrl, string containerName)
     {
+        if (string.IsNullOrWhiteSpace(blobUrl))
+            return;
+
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         var uri = new Uri(blobUrl);
-        var blobName = string.Join("/", uri.Segments.Skip(2)); // skip container segment
+        var segments = uri.Segments
+            .Select(segment => segment.Trim('/'))
+            .Where(segment => !string.IsNullOrWhiteSpace(segment))
+            .ToList();
+        var containerIndex = segments.FindIndex(segment =>
+            segment.Equals(containerName, StringComparison.OrdinalIgnoreCase));
+
+        if (containerIndex < 0 || containerIndex == segments.Count - 1)
+        {
+            _logger.LogWarning("Could not resolve blob name from URL {BlobUrl}", blobUrl);
+            return;
+        }
+
+        var blobName = string.Join("/", segments.Skip(containerIndex + 1));
         var blobClient = containerClient.GetBlobClient(blobName);
 
         await blobClient.DeleteIfExistsAsync();

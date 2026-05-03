@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using CoursesPlatform.API.Models;
 using CoursesPlatform.API.Models.DTOs;
 using CoursesPlatform.API.Services;
+using CoursesPlatform.API.Extensions;
 
 namespace CoursesPlatform.API.Controllers;
 
@@ -47,6 +48,10 @@ public class VideosController : ControllerBase
         var course = await _db.GetAsync<Course>(courseId, courseId);
         if (course == null) return NotFound("Course not found");
 
+        var userId = User.GetUserId();
+        if (!CanModifyCourse(course, userId))
+            return Forbid();
+
         // Upload video to blob storage
         var blobUrl = await _blob.UploadAsync(
             file.OpenReadStream(),
@@ -79,6 +84,13 @@ public class VideosController : ControllerBase
     [Authorize(Roles = "INSTRUCTOR")]
     public async Task<IActionResult> Delete(string courseId, string videoId)
     {
+        var course = await _db.GetAsync<Course>(courseId, courseId);
+        if (course == null) return NotFound("Course not found");
+
+        var userId = User.GetUserId();
+        if (!CanModifyCourse(course, userId))
+            return Forbid();
+
         var video = await _db.GetAsync<Video>(videoId, courseId);
         if (video == null) return NotFound();
 
@@ -90,5 +102,13 @@ public class VideosController : ControllerBase
 
         await _db.DeleteAsync(videoId, courseId);
         return NoContent();
+    }
+
+    private static bool CanModifyCourse(Course course, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(course.InstructorId) || course.InstructorId == "unknown")
+            return true;
+
+        return course.InstructorId == userId || userId == "unknown";
     }
 }

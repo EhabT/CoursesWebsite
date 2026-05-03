@@ -46,6 +46,9 @@ public class RatingsController : ControllerBase
         if (dto.Score < 1 || dto.Score > 5)
             return BadRequest("Score must be between 1 and 5");
 
+        var course = await _db.GetAsync<Course>(courseId, courseId);
+        if (course == null) return NotFound("Course not found");
+
         var userId = User.GetUserId();
 
         // Check if user already rated this course
