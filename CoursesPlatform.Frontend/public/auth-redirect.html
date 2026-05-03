@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><title>Auth Redirect</title></head>
+<body>
+  <script>
+    // This blank page handles the MSAL popup redirect.
+    // MSAL detects the auth code in the URL and sends it back to the opener window,
+    // then closes this popup automatically.
+    if (window.opener) {
+      window.opener.postMessage('msal-redirect', window.location.origin);
+    }
+  </script>
+</body>
+</html>

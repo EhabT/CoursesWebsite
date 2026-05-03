@@ -5,7 +5,7 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 import { msalInstance } from '../main';
-import { loginRequest } from '../authConfig';
+import { apiRequest } from '../authConfig';
 
 /**
  * Generic fetch wrapper with auth token injection and error handling.
@@ -15,21 +15,25 @@ async function request(endpoint, options = {}) {
   
   // Try to acquire an access token silently
   let token = null;
-  const activeAccount = msalInstance.getAllAccounts()[0];
+  const activeAccount = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
   if (activeAccount) {
     try {
       const tokenResponse = await msalInstance.acquireTokenSilent({
-        ...loginRequest,
+        ...apiRequest,
         account: activeAccount
       });
       token = tokenResponse.accessToken;
     } catch (e) {
-      console.warn("Failed to acquire token silently, redirecting...", e);
-      await msalInstance.acquireTokenRedirect({
-        ...loginRequest,
-        account: activeAccount
-      });
-      return; // Stop execution as the page will redirect
+      console.warn("Silent token failed, trying popup...", e);
+      try {
+        const tokenResponse = await msalInstance.acquireTokenPopup({
+          ...apiRequest,
+          account: activeAccount
+        });
+        token = tokenResponse.accessToken;
+      } catch (popupError) {
+        console.warn("Popup token also failed", popupError);
+      }
     }
   }
   

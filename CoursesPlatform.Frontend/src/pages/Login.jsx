@@ -8,30 +8,38 @@ export default function Login() {
   const { instance, accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const [loginError, setLoginError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const email = isAuthenticated && accounts.length > 0 ? (accounts[0].username || '') : '';
+  // Determine role: prefer Entra claim, then fall back by email keyword
+  const email = (isAuthenticated && accounts.length > 0) ? (accounts[0].username || '') : '';
+  const roleFromClaim = accounts[0]?.idTokenClaims?.roles?.[0];
   const isInstructor = email.toLowerCase().includes('etarek') || email.toLowerCase().includes('instructor');
-  const role = isAuthenticated && accounts.length > 0 
-    ? (accounts[0].idTokenClaims?.roles?.[0] || (isInstructor ? 'INSTRUCTOR' : 'STUDENT'))
+  const role = isAuthenticated
+    ? (roleFromClaim || (isInstructor ? 'INSTRUCTOR' : 'STUDENT'))
     : null;
 
   async function handleLogin() {
+    setLoginError(null);
+    setLoading(true);
     try {
-      setLoginError(null);
-      await instance.loginPopup(loginRequest);
-      navigate('/');
+      // CIAM (External ID) works best with redirect, not popup
+      await instance.loginRedirect(loginRequest);
+      // Note: navigate('/') is handled by MSAL after redirect completes
     } catch (error) {
-      console.error(error);
-      setLoginError(error.message || 'Unknown login error');
+      setLoading(false);
+      console.error('Login error:', error);
+      setLoginError(error.message || 'Login failed. Please try again.');
     }
   }
 
   async function handleLogout() {
     try {
-      await instance.logoutPopup();
-      navigate('/');
+      await instance.logoutRedirect({
+        account: accounts[0],
+        postLogoutRedirectUri: window.location.origin + '/login',
+      });
     } catch (error) {
-      console.error(error);
+      console.error('Logout error:', error);
     }
   }
 
@@ -54,7 +62,8 @@ export default function Login() {
               padding: '12px 16px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
               borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem', color: '#a7f3d0',
             }}>
-              ✅ Logged in as <strong>{accounts[0].name}</strong> (Role: {role})
+              ✅ Signed in as <strong>{accounts[0]?.name || email}</strong>
+              <div style={{ marginTop: '4px', fontSize: '0.78rem' }}>Role: <strong>{role}</strong></div>
             </div>
           ) : (
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px', textAlign: 'center' }}>
@@ -67,19 +76,34 @@ export default function Login() {
               padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
               borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem', color: '#fca5a5', wordBreak: 'break-word'
             }}>
-              ❌ <strong>Login Error:</strong> {loginError}
+              ❌ <strong>Error:</strong> {loginError}
             </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {!isAuthenticated ? (
-              <button id="login-btn" className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={handleLogin}>
-                🔐 Sign In with Microsoft
+              <button
+                id="login-btn"
+                className="btn btn-primary btn-lg"
+                style={{ width: '100%', opacity: loading ? 0.7 : 1 }}
+                onClick={handleLogin}
+                disabled={loading}
+              >
+                {loading ? '⏳ Signing in...' : '🔐 Sign In with Microsoft'}
               </button>
             ) : (
-              <button id="logout-btn" className="btn btn-secondary" style={{ width: '100%' }} onClick={handleLogout}>
-                Sign Out
-              </button>
+              <>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={() => navigate(role === 'INSTRUCTOR' ? '/dashboard' : '/')}
+                >
+                  {role === 'INSTRUCTOR' ? '📊 Go to Dashboard' : '🏠 Go to Home'}
+                </button>
+                <button id="logout-btn" className="btn btn-secondary" style={{ width: '100%' }} onClick={handleLogout}>
+                  Sign Out
+                </button>
+              </>
             )}
           </div>
         </div>
