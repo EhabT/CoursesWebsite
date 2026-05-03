@@ -3,20 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { loginRequest } from '../authConfig';
 
-export default function Login() {
+export default function Login({ role }) {
   const navigate = useNavigate();
   const { instance, accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const [loginError, setLoginError] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  // Determine role: prefer Entra claim, then fall back by email keyword
-  const email = (isAuthenticated && accounts.length > 0) ? (accounts[0].username || '') : '';
-  const roleFromClaim = accounts[0]?.idTokenClaims?.roles?.[0];
-  const isInstructor = email.toLowerCase().includes('etarek') || email.toLowerCase().includes('instructor');
-  const role = isAuthenticated
-    ? (roleFromClaim || (isInstructor ? 'INSTRUCTOR' : 'STUDENT'))
-    : null;
 
   async function handleLogin() {
     setLoginError(null);

@@ -1,21 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { useIsAuthenticated, useMsal } from '@azure/msal-react';
+import { useIsAuthenticated } from '@azure/msal-react';
 import Home from './pages/Home';
 import CourseDetail from './pages/CourseDetail';
 import InstructorDashboard from './pages/InstructorDashboard';
 import Login from './pages/Login';
+import { authApi } from './services/api';
 
 export default function App() {
   const isAuthenticated = useIsAuthenticated();
-  const { accounts } = useMsal();
-  
-  // Extract role from the Entra ID token claims
-  const email = isAuthenticated && accounts.length > 0 ? (accounts[0].username || '') : '';
-  const isInstructor = email.toLowerCase().includes('etarek') || email.toLowerCase().includes('instructor');
-  const role = isAuthenticated && accounts.length > 0 
-    ? (accounts[0].idTokenClaims?.roles?.[0] || (isInstructor ? 'INSTRUCTOR' : 'STUDENT'))
-    : null;
+  const [role, setRole] = useState(null);
+
+  // Fetch the role from the backend after login — roles live in the access token,
+  // not the ID token, so we can't read them from idTokenClaims on the frontend.
+  useEffect(() => {
+    if (isAuthenticated) {
+      authApi.getMe()
+        .then(data => setRole(data.role))
+        .catch(() => setRole('STUDENT'));
+    } else {
+      setRole(null);
+    }
+  }, [isAuthenticated]);
 
   // Route Guard Component
   const ProtectedRoute = ({ children, requiredRole }) => {
@@ -59,7 +65,7 @@ export default function App() {
               <InstructorDashboard />
             </ProtectedRoute>
           } />
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login role={role} />} />
         </Routes>
       </div>
     </Router>

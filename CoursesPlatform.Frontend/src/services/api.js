@@ -111,3 +111,8 @@ export const uploadApi = {
   image: (formData) => request('/upload/image', { method: 'POST', body: formData }),
   video: (formData) => request('/upload/video', { method: 'POST', body: formData }),
 };
+
+// ── Auth / current user ──
+export const authApi = {
+  getMe: () => request('/me'),
+};

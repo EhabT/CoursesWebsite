@@ -45,12 +45,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins(
-                builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? new[] { "http://localhost:5173", "http://localhost:3000" })
+            .AllowAnyOrigin()
             .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
+            .AllowAnyHeader();
+        // Note: AllowCredentials() cannot be combined with AllowAnyOrigin().
+        // Auth uses Bearer tokens in headers, so credentials (cookies) are not needed.
     });
 });
 
@@ -79,6 +78,14 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+// Returns the authenticated user's role — used by the frontend since roles live
+// in the access token (not the ID token), so the frontend can't read them directly.
+app.MapGet("/api/me", (ClaimsPrincipal user) =>
+{
+    var role = user.IsInRole("INSTRUCTOR") ? "INSTRUCTOR" : "STUDENT";
+    return Results.Ok(new { role });
+}).RequireAuthorization();
 
 app.Run();
 
