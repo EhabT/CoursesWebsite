@@ -11,8 +11,9 @@ export default function App() {
   const { accounts } = useMsal();
   
   // Extract role from the Entra ID token claims
+  const email = isAuthenticated && accounts.length > 0 ? accounts[0].username : '';
   const role = isAuthenticated && accounts.length > 0 
-    ? (accounts[0].idTokenClaims?.roles?.[0] || 'STUDENT')
+    ? (accounts[0].idTokenClaims?.roles?.[0] || (email.toLowerCase() === 'etarek1310@gmail.com' ? 'INSTRUCTOR' : 'STUDENT'))
     : null;
 
   // Route Guard Component

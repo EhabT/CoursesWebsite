@@ -2,6 +2,8 @@ using Microsoft.Azure.Cosmos;
 using Azure.Storage.Blobs;
 using Microsoft.Identity.Web;
 using CoursesPlatform.API.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +37,7 @@ builder.Services.AddSingleton<CognitiveService>();
 
 // ── Microsoft Entra ID (Azure AD) Authentication ──
 builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "AzureAd");
+builder.Services.AddTransient<IClaimsTransformation, DemoRoleClaimsTransformation>();
 
 // ── CORS (allow React frontend) ──
 builder.Services.AddCors(options =>
@@ -78,3 +81,25 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
+
+public class DemoRoleClaimsTransformation : IClaimsTransformation
+{
+    public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+    {
+        var clone = principal.Clone();
+        var newIdentity = (ClaimsIdentity?)clone.Identity;
+
+        if (newIdentity != null && newIdentity.IsAuthenticated)
+        {
+            var email = clone.FindFirstValue("preferred_username") ?? clone.FindFirstValue("emails") ?? clone.FindFirstValue(ClaimTypes.Name);
+            if (email != null && email.Equals("etarek1310@gmail.com", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!clone.IsInRole("INSTRUCTOR"))
+                {
+                    newIdentity.AddClaim(new Claim(ClaimTypes.Role, "INSTRUCTOR"));
+                }
+            }
+        }
+        return Task.FromResult(clone);
+    }
+}

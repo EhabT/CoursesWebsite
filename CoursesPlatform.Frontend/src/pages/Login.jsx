@@ -9,14 +9,16 @@ export default function Login() {
   const isAuthenticated = useIsAuthenticated();
   const [loginError, setLoginError] = useState(null);
   
+  const email = isAuthenticated && accounts.length > 0 ? accounts[0].username : '';
   const role = isAuthenticated && accounts.length > 0 
-    ? (accounts[0].idTokenClaims?.roles?.[0] || 'STUDENT')
+    ? (accounts[0].idTokenClaims?.roles?.[0] || (email.toLowerCase() === 'etarek1310@gmail.com' ? 'INSTRUCTOR' : 'STUDENT'))
     : null;
 
   async function handleLogin() {
     try {
       setLoginError(null);
-      await instance.loginRedirect(loginRequest);
+      await instance.loginPopup(loginRequest);
+      navigate('/');
     } catch (error) {
       console.error(error);
       setLoginError(error.message || 'Unknown login error');
@@ -25,7 +27,8 @@ export default function Login() {
 
   async function handleLogout() {
     try {
-      await instance.logoutRedirect();
+      await instance.logoutPopup();
+      navigate('/');
     } catch (error) {
       console.error(error);
     }
