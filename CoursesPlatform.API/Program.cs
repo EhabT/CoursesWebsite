@@ -92,7 +92,7 @@ public class DemoRoleClaimsTransformation : IClaimsTransformation
         if (newIdentity != null && newIdentity.IsAuthenticated)
         {
             var email = clone.FindFirstValue("preferred_username") ?? clone.FindFirstValue("emails") ?? clone.FindFirstValue(ClaimTypes.Name);
-            if (email != null && email.Equals("etarek1310@gmail.com", StringComparison.OrdinalIgnoreCase))
+            if (email != null && (email.Equals("etarek1310@gmail.com", StringComparison.OrdinalIgnoreCase) || email.Contains("instructor", StringComparison.OrdinalIgnoreCase) || email.Contains("etarek", StringComparison.OrdinalIgnoreCase)))
             {
                 if (!clone.IsInRole("INSTRUCTOR"))
                 {
