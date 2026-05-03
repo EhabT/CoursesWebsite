@@ -10,7 +10,7 @@ public static class ClaimsPrincipalExtensions
         // .NET automatically maps "sub" to ClaimTypes.NameIdentifier and "oid" to ClaimTypes.ObjectId
         var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
             ?? user.FindFirst("sub")?.Value
-            ?? user.FindFirst(ClaimTypes.ObjectId)?.Value
+            ?? user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
             ?? user.FindFirst("oid")?.Value
             ?? "unknown";
 
