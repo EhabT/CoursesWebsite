@@ -75,11 +75,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .AllowAnyOrigin()
+            .WithOrigins(
+                "https://agreeable-glacier-044338b03.7.azurestaticapps.net",
+                "http://localhost:5173")
             .AllowAnyMethod()
             .AllowAnyHeader();
-        // Note: AllowCredentials() cannot be combined with AllowAnyOrigin().
-        // Auth uses Bearer tokens in headers, so credentials (cookies) are not needed.
     });
 });
 

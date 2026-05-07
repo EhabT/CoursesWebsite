@@ -46,6 +46,20 @@ public class CoursesController : ControllerBase
     }
 
     /// <summary>
+    /// GET /api/courses/mine — INSTRUCTOR only: courses created by the authenticated instructor
+    /// </summary>
+    [HttpGet("mine")]
+    [Authorize(Roles = "INSTRUCTOR")]
+    public async Task<ActionResult<List<Course>>> GetMine()
+    {
+        var userId = User.GetUserId();
+        var courses = await _db.SqlQueryAsync<Course>(
+            "SELECT * FROM c WHERE c.type = 'COURSE' AND c.instructorId = @instructorId",
+            new Dictionary<string, object> { { "@instructorId", userId } });
+        return Ok(courses);
+    }
+
+    /// <summary>
     /// POST /api/courses — INSTRUCTOR only: create a new course
     /// </summary>
     [HttpPost]

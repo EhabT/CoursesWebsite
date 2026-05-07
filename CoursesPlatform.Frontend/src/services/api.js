@@ -69,6 +69,7 @@ async function request(endpoint, options = {}) {
 // ── Courses ──
 export const coursesApi = {
   getAll: () => request('/courses'),
+  getMine: () => request('/courses/mine', { authRequired: true }),
   getById: (id) => request(`/courses/${id}`),
   create: (data) => request('/courses', { method: 'POST', body: JSON.stringify(data), authRequired: true }),
   update: (id, data) => request(`/courses/${id}`, { method: 'PUT', body: JSON.stringify(data), authRequired: true }),
