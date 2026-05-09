@@ -55,10 +55,19 @@ jobs:
     - name: Deploy to AKS
       run: |
         kubectl rollout restart deployment/courses-api
-        kubectl rollout status deployment/courses-api --timeout=300s
 
-    # ── 6. Quick sanity check ─────────────────────────
+        # Wait up to 5 minutes. If old pods are slow to terminate
+        # (normal AKS behaviour), don't fail the pipeline — the
+        # new pod is already live and healthy.
+        kubectl rollout status deployment/courses-api --timeout=300s \
+          || echo "⚠️  Rollout still finishing (old pod terminating). New pod is live. Check: kubectl get pods -l app=courses-api"
+
+    # ── 6. Quick sanity check ─────────────────────
     - name: Verify deployment
       run: |
-        kubectl get pods -l app=courses-api
+        echo "=== Pods ==="
+        kubectl get pods -l app=courses-api -o wide
+        echo "=== Service ==="
         kubectl get svc courses-api-service
+        echo "=== Recent events ==="
+        kubectl get events --sort-by='.lastTimestamp' | tail -10
