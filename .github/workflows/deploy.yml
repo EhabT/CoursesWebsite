@@ -28,15 +28,17 @@ jobs:
         password: ${{ secrets.ACR_PASSWORD }}
 
     # ── 3. Build and push the Docker image ───────────
+    # We only deploy :latest to AKS. The SHA tag is pushed
+    # for traceability/rollback but AKS always pulls :latest.
     - name: Build and Push Docker Image
       run: |
         docker build \
-          -t ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:${{ github.sha }} \
           -t ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:latest \
+          -t ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:${{ github.sha }} \
           -f CoursesPlatform.API/Dockerfile .
 
-        docker push ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:${{ github.sha }}
         docker push ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:latest
+        docker push ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:${{ github.sha }}
 
     # ── 4. Authenticate to AKS via kubeconfig ────────
     # Uses the raw kubeconfig file you saved as a secret.
@@ -48,12 +50,12 @@ jobs:
         kubeconfig: ${{ secrets.KUBECONFIG_SECRET }}
 
     # ── 5. Roll out the new image ─────────────────────
+    # rollout restart forces AKS to re-pull :latest without
+    # changing the image spec — the same approach used manually.
     - name: Deploy to AKS
       run: |
-        kubectl set image deployment/courses-api \
-          courses-api=${{ secrets.ACR_LOGIN_SERVER }}/courses-api:${{ github.sha }}
-
-        kubectl rollout status deployment/courses-api --timeout=180s
+        kubectl rollout restart deployment/courses-api
+        kubectl rollout status deployment/courses-api --timeout=300s
 
     # ── 6. Quick sanity check ─────────────────────────
     - name: Verify deployment
