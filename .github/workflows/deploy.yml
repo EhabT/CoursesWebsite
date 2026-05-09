@@ -8,46 +8,54 @@ on:
   push:
     branches: [main]
 
-env:
-  ACR_NAME: ${{ secrets.ACR_NAME }}
-  AKS_RESOURCE_GROUP: ${{ secrets.AKS_RESOURCE_GROUP }}
-  AKS_CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+
+    # ── 1. Checkout source code ──────────────────────
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Login to Azure
-      uses: azure/login@v2
+    # ── 2. Log in to ACR using Admin credentials ─────
+    # No Service Principal needed — uses the Admin user
+    # enabled on your ACR (Access keys page in Portal).
+    - name: Log in to Azure Container Registry
+      uses: docker/login-action@v3
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        registry: ${{ secrets.ACR_LOGIN_SERVER }}
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
 
-    - name: Build and push Docker image to ACR
+    # ── 3. Build and push the Docker image ───────────
+    - name: Build and Push Docker Image
       run: |
-        az acr build \
-          --registry ${{ env.ACR_NAME }} \
-          --image courses-api:${{ github.sha }} \
-          --image courses-api:latest \
-          --file CoursesPlatform.API/Dockerfile .
+        docker build \
+          -t ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:${{ github.sha }} \
+          -t ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:latest \
+          -f CoursesPlatform.API/Dockerfile .
 
-    - name: Set AKS context
-      uses: azure/aks-set-context@v4
+        docker push ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:${{ github.sha }}
+        docker push ${{ secrets.ACR_LOGIN_SERVER }}/courses-api:latest
+
+    # ── 4. Authenticate to AKS via kubeconfig ────────
+    # Uses the raw kubeconfig file you saved as a secret.
+    # No az login / Service Principal required.
+    - name: Set up Kubernetes context
+      uses: azure/k8s-set-context@v4
       with:
-        resource-group: ${{ env.AKS_RESOURCE_GROUP }}
-        cluster-name: ${{ env.AKS_CLUSTER_NAME }}
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBECONFIG_SECRET }}
 
+    # ── 5. Roll out the new image ─────────────────────
     - name: Deploy to AKS
       run: |
-        # Update the deployment image to the new build
         kubectl set image deployment/courses-api \
-          courses-api=${{ env.ACR_NAME }}.azurecr.io/courses-api:${{ github.sha }}
+          courses-api=${{ secrets.ACR_LOGIN_SERVER }}/courses-api:${{ github.sha }}
 
-        # Wait for rollout to complete
-        kubectl rollout status deployment/courses-api --timeout=120s
+        kubectl rollout status deployment/courses-api --timeout=180s
 
+    # ── 6. Quick sanity check ─────────────────────────
     - name: Verify deployment
       run: |
         kubectl get pods -l app=courses-api
